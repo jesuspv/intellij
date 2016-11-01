@@ -1,5 +1,5 @@
-FROM ubuntu:xenial
 # TODO replace by a light-weight image like alpine
+FROM ubuntu:xenial
 
 MAINTAINER Jesús Pardillo "dev@jesuspardillo.com"
 
@@ -24,7 +24,7 @@ RUN add-apt-repository ppa:webupd8team/java && apt-get update \
     && rm -rf /tmp/*
 
 # wget IntelliJ IDEA
-ENV INTELLIJ_URL=https://download.jetbrains.com/idea/ideaIC-2016.2.3.tar.gz
+ENV INTELLIJ_URL=https://download.jetbrains.com/idea/ideaIC-2016.2.5.tar.gz
 RUN wget --progress=bar:force $INTELLIJ_URL -O /tmp/intellij.tar.gz \
     && mkdir /opt/intellij \
     && tar -xzf /tmp/intellij.tar.gz -C /opt/intellij --strip-components=1 \
