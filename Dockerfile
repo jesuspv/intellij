@@ -1,6 +1,5 @@
 FROM ubuntu:xenial
 # TODO replace by a light-weight image like alpine
-# TODO make X11 forwarding work with gosu (for running with custom user)
 
 MAINTAINER Jesús Pardillo "dev@jesuspardillo.com"
 

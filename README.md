@@ -1,7 +1,8 @@
-IntelliJ docker image based on psharkey/intellij's.
+IntelliJ Docker image with gosu and X11-forwarding.
 
-It differs from phsharkey's in that it configures container's user
-to mimic host's using gosu (https://github.com/tianon/gosu).
+Being based on psharkey/intellij's, it differs from phsharkey's
+in that it configures container's user to mimic host's using gosu
+(https://github.com/tianon/gosu, https://denibertovic.com/posts/handling-permissions-with-docker-volumes).
 
 A convenient way to run it, even through X11-forwarded SSH
 (https://dzone.com/articles/docker-x11-client-via-ssh),
@@ -22,6 +23,6 @@ docker run -it \
    jesuspv/intellij'
 ```
 
-Notice that this alias requires to have available both
+Notice that this alias requires to have available both:
  (i) a working IntelliJ user profile ($HOME/.IdeaIC2016.2), and
  (ii) a Maven repository ($HOME/.m2/repository) to reuse artifacts.
