@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+IDEA_TAR=ideaIC-2016.3.1.tar.gz
 IDEA_CFG=IdeaIC2016.3
 
 IMAGE_DIR=$(mktemp -d)
@@ -12,7 +13,7 @@ cat << EOF > $IMAGE_DIR/Dockerfile
 # TODO replace by a light-weight image like alpine
 FROM ubuntu:xenial
 
-MAINTAINER Jesús Pardillo Vela "dev@jesuspardillo.com"
+MAINTAINER Jesús Pardillo Vela "jesus.pardillo.vela@ericsson.com"
 
 ##### based on https://hub.docker.com/r/psharkey/intellij
 
@@ -36,29 +37,16 @@ RUN add-apt-repository ppa:webupd8team/java && apt-get update \
     && rm -rf /tmp/*
 
 # Get IntelliJ IDEA
-ENV INTELLIJ_URL=https://download.jetbrains.com/idea/ideaIC-2016.3.1.tar.gz
+ENV INTELLIJ_URL=https://download.jetbrains.com/idea/$IDEA_TAR
 RUN wget --progress=bar:force \$INTELLIJ_URL -O /tmp/intellij.tar.gz \
     && mkdir /opt/intellij \
     && tar -xzf /tmp/intellij.tar.gz -C /opt/intellij --strip-components=1 \
     && rm -rf /tmp/*
 
-# Update idea.properties to refer config to a inner directory inside the docker volume for .intellijrc.
-# Otherwise, docker would generate an empty \$HOME/.IdeaXXX directory that makes IDEA fail to start
-RUN sed -i \
-    -e 's|# \(idea.config.path=\${user.home}\)/.IdeaIC/config|\1/.intellijrc/$IDEA_CFG/config|' \
-    -e 's|# \(idea.system.path=\${user.home}\)/.IdeaIC/system|\1/.intellijrc/$IDEA_CFG/system|' \
-    -e 's|# idea.plugins.path=\${idea.config.path}/plugins|idea.plugins.path=\${user.home}/.intellijrc/$IDEA_CFG/plugins|' \
-    -e 's|# idea.log.path=\${idea.system.path}/log|idea.log.path=\${user.home}/.intellijrc/$IDEA_CFG/log|' \
-    /opt/intellij/bin/idea.properties
-
 # Configure user for proper file sharing over host volumes
 RUN groupadd -g $(id -g $USER) $(groups $USER | cut -d' ' -f3)
 RUN useradd --shell /bin/bash -u $(id -u $USER) -G $(groups $USER | cut -d' ' -f3) -o -c "" -m $USER
 USER $USER
-#RUN groupadd -g USER_GROUP_ID USER_GROUP_NAME
-#RUN useradd --shell /bin/bash -u USER_ID -G USER_GROUP_NAME -o -c "" -m USER_NAME
-#USER USER_NAME
-#RUN mkdir -p $HOME/.intellijrc/Idea2016.3/config $HOME/.idearc/Idea2016.3/system
 
 CMD ["/opt/intellij/bin/idea.sh"]
 EOF
@@ -67,9 +55,14 @@ docker build -t $USER/intellij $IMAGE_DIR
 
 ############################################################################### run
 
-BIN_PATH=$(dirname $(readlink -f ${BASH_SOURCE}))
+function docker-volume-create()
+{
+   docker volume create --name $1
+   docker run --restart=always -itd --name vol-$1 -v $1:/$1 busybox sh
+}
 
-docker volume inspect --format='{{.Name}}' intellijrc &> /dev/null || docker-volume-create intellijrc
+docker volume inspect --format='{{.Name}}' intellijrc &> /dev/null \
+   || docker-volume-create intellijrc
 
 # Reference: https://dzone.com/articles/docker-x11-client-via-ssh
 chmod o+rw $HOME/.Xauthority
@@ -79,7 +72,8 @@ docker run -it \
    --env=DISPLAY \
    --env=TZ=Spain/Madrid \
    --volume=$HOME/.Xauthority:$HOME/.Xauthority:rw \
-   --volume=intellijrc:$HOME/.intellijrc \
+   --volume=intellijrc:$HOME/.$IDEA_CFG \
    --volume=$PWD:$HOME/src \
    --workdir=$HOME/src \
+   --name=intellij \
    $USER/intellij $*
