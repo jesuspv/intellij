@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-IDEA_TAR=ideaIC-2016.3.1.tar.gz
+IDEA_TAR=ideaIC-2016.3.2.tar.gz
 IDEA_CFG=IdeaIC2016.3
 
 IMAGE_DIR=$(mktemp -d)
@@ -13,7 +13,7 @@ cat << EOF > $IMAGE_DIR/Dockerfile
 # TODO replace by a light-weight image like alpine
 FROM ubuntu:xenial
 
-MAINTAINER Jesús Pardillo Vela "jesus.pardillo.vela@ericsson.com"
+MAINTAINER Jesús Pardillo Vela "dev@jesuspardillo.com"
 
 ##### based on https://hub.docker.com/r/psharkey/intellij
 
