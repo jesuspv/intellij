@@ -24,5 +24,5 @@ docker run -it \
 ```
 
 Notice that this alias requires to have available both:
- (i) a working IntelliJ user profile ($HOME/.IdeaIC2016.2), and
+ (i) a working IntelliJ user profile ($HOME/.IdeaIC2017.1), and
  (ii) a Maven repository ($HOME/.m2/repository) to reuse artifacts.
