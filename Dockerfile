@@ -13,18 +13,19 @@ RUN apt-get update \
 
 # Install OpenJDK 8, X11 libraries, wget, git, and vim
 RUN add-apt-repository ppa:webupd8team/java && apt-get update \
-    && apt-get install -y \ 
+    && apt-get install -y \
        libxext-dev libxrender-dev libxtst-dev \
        openjdk-8-jdk \
        wget \
        git \
        vim \
+       x11-xserver-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/*
 
 # wget IntelliJ IDEA
-ENV INTELLIJ_URL=https://download.jetbrains.com/idea/ideaIC-2016.2.5.tar.gz
+ENV INTELLIJ_URL=https://download.jetbrains.com/idea/ideaIC-2017.1.tar.gz
 RUN wget --progress=bar:force $INTELLIJ_URL -O /tmp/intellij.tar.gz \
     && mkdir /opt/intellij \
     && tar -xzf /tmp/intellij.tar.gz -C /opt/intellij --strip-components=1 \

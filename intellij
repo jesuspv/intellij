@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-IDEA_TAR=ideaIC-2016.3.2.tar.gz
-IDEA_CFG=IdeaIC2016.3
+IDEA_TAR=ideaIC-2017.1.tar.gz
+IDEA_CFG=IdeaIC2017.1
 
 IMAGE_DIR=$(mktemp -d)
 
@@ -13,7 +13,7 @@ cat << EOF > $IMAGE_DIR/Dockerfile
 # TODO replace by a light-weight image like alpine
 FROM ubuntu:xenial
 
-MAINTAINER Jesús Pardillo Vela "dev@jesuspardillo.com"
+MAINTAINER Jesús Pardillo "dev@jesuspardillo.com"
 
 ##### based on https://hub.docker.com/r/psharkey/intellij
 
@@ -44,8 +44,18 @@ RUN wget --progress=bar:force \$INTELLIJ_URL -O /tmp/intellij.tar.gz \
     && rm -rf /tmp/*
 
 # Configure user for proper file sharing over host volumes
-RUN groupadd -g $(id -g $USER) $(groups $USER | cut -d' ' -f3)
-RUN useradd --shell /bin/bash -u $(id -u $USER) -G $(groups $USER | cut -d' ' -f3) -o -c "" -m $USER
+RUN for GROUP in $(groups | xargs getent group | cut -d: -f1,3 | tr '\n' ' '); \
+       do groupadd --gid \${GROUP#*:} \${GROUP%:*}; done \
+    && useradd \
+       --shell /bin/bash \
+       --uid $(id -u $USER) \
+       --groups $(groups | tr ' ' ,) \
+       --non-unique \
+       --comment "containerized host user" \
+       --create-home $USER \
+    && usermod \ `# set primary group`
+       --gid $(groups | cut -d' ' -f1) \
+       $USER
 USER $USER
 
 CMD ["/opt/intellij/bin/idea.sh"]
@@ -55,15 +65,6 @@ docker build -t $USER/intellij $IMAGE_DIR
 
 ############################################################################### run
 
-function docker-volume-create()
-{
-   docker volume create --name $1
-   docker run --restart=always -itd --name vol-$1 -v $1:/$1 busybox sh
-}
-
-docker volume inspect --format='{{.Name}}' intellijrc &> /dev/null \
-   || docker-volume-create intellijrc
-
 # Reference: https://dzone.com/articles/docker-x11-client-via-ssh
 chmod o+rw $HOME/.Xauthority
 docker run -it \
@@ -71,9 +72,8 @@ docker run -it \
    --net=host \
    --env=DISPLAY \
    --env=TZ=Spain/Madrid \
-   --volume=$HOME/.Xauthority:$HOME/.Xauthority:rw \
-   --volume=intellijrc:$HOME/.$IDEA_CFG \
-   --volume=$PWD:$HOME/src \
-   --workdir=$HOME/src \
-   --name=intellij \
+   --volume=$HOME:$HOME \
+   --volume=$PWD:/src \
+   --workdir=/src \
+   --name=intellij-$USER \
    $USER/intellij $*
