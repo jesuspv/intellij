@@ -1,9 +1,32 @@
-# TODO replace by a light-weight image like alpine
 FROM ubuntu:xenial
 
 MAINTAINER Jesús Pardillo "dev@jesuspardillo.com"
 
-##### based on https://hub.docker.com/r/psharkey/intellij
+ENV INTELLIJ_URL https://download.jetbrains.com/idea/ideaIC-2017.1.tar.gz
+
+#####################
+# gosu Installation #
+#####################
+
+# See https://denibertovic.com/posts/handling-permissions-with-docker-volumes
+
+RUN apt-get update && apt-get -y --no-install-recommends install \
+    ca-certificates \
+    curl
+
+ENV GOSU_VERSION 1.10
+RUN gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4
+RUN curl -o /usr/local/bin/gosu -SL "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
+    && curl -o /usr/local/bin/gosu.asc -SL "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
+    && gpg --verify /usr/local/bin/gosu.asc \
+    && rm /usr/local/bin/gosu.asc \
+    && chmod +x /usr/local/bin/gosu
+
+#########################
+# IntelliJ Installation #
+#########################
+
+# See https://hub.docker.com/r/psharkey/intellij
 
 # Get the python script required for "add-apt-repository"
 # Configure the openjdk repo
@@ -19,37 +42,22 @@ RUN add-apt-repository ppa:webupd8team/java && apt-get update \
        wget \
        git \
        vim \
-       x11-xserver-utils \
-    && apt-get clean \
+       x11-xserver-utils
+
+RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/*
 
-# wget IntelliJ IDEA
-ENV INTELLIJ_URL=https://download.jetbrains.com/idea/ideaIC-2017.1.tar.gz
 RUN wget --progress=bar:force $INTELLIJ_URL -O /tmp/intellij.tar.gz \
-    && mkdir /opt/intellij \
-    && tar -xzf /tmp/intellij.tar.gz -C /opt/intellij --strip-components=1 \
+    && mkdir -p /opt/intellij \
+    && tar xzf /tmp/intellij.tar.gz -C /opt/intellij --strip-components=1 \
     && rm -rf /tmp/*
 
-########### From https://denibertovic.com/posts/handling-permissions-with-docker-volumes
-
-RUN apt-get update && apt-get -y --no-install-recommends install \
-    ca-certificates \
-    curl
-
-ENV GOSU_VERSION 1.10
-RUN gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4
-RUN curl -o /usr/local/bin/gosu -SL "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
-    && curl -o /usr/local/bin/gosu.asc -SL "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
-    && gpg --verify /usr/local/bin/gosu.asc \
-    && rm /usr/local/bin/gosu.asc \
-    && chmod +x /usr/local/bin/gosu
+########################
+# Entrypoint with gosu #
+########################
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-
-###########
-
-RUN apt-get install -y x11-xserver-utils
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/opt/intellij/bin/idea.sh"]

@@ -1,69 +1,7 @@
 #!/usr/bin/env bash
 
-IDEA_TAR=ideaIC-2017.1.tar.gz
-IDEA_CFG=IdeaIC2017.1
-
-IMAGE_DIR=$(mktemp -d)
-
-trap "rm -rf $IMAGE_DIR" EXIT
-
-############################################################################### Dockerfile
-
-cat << EOF > $IMAGE_DIR/Dockerfile
-# TODO replace by a light-weight image like alpine
-FROM ubuntu:xenial
-
-MAINTAINER Jesús Pardillo "dev@jesuspardillo.com"
-
-##### based on https://hub.docker.com/r/psharkey/intellij
-
-# Get the python script required for "add-apt-repository"
-# Configure the openjdk repo
-RUN apt-get update \
-    && apt-get install -y software-properties-common \
-    && add-apt-repository ppa:openjdk-r/ppa
-
-# Install OpenJDK 8, X11 libraries, wget, git, and vim
-RUN add-apt-repository ppa:webupd8team/java && apt-get update \
-    && apt-get install -y \
-       libxext-dev libxrender-dev libxtst-dev \
-       openjdk-8-jdk \
-       wget \
-       git \
-       vim \
-       x11-xserver-utils \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /tmp/*
-
-# Get IntelliJ IDEA
-ENV INTELLIJ_URL=https://download.jetbrains.com/idea/$IDEA_TAR
-RUN wget --progress=bar:force \$INTELLIJ_URL -O /tmp/intellij.tar.gz \
-    && mkdir /opt/intellij \
-    && tar -xzf /tmp/intellij.tar.gz -C /opt/intellij --strip-components=1 \
-    && rm -rf /tmp/*
-
-# Configure user for proper file sharing over host volumes
-RUN for GROUP in $(groups | xargs getent group | cut -d: -f1,3 | tr '\n' ' '); \
-       do groupadd --gid \${GROUP#*:} \${GROUP%:*}; done \
-    && useradd \
-       --shell /bin/bash \
-       --uid $(id -u $USER) \
-       --groups $(groups | tr ' ' ,) \
-       --non-unique \
-       --comment "containerized host user" \
-       --create-home $USER \
-    && usermod \ `# set primary group`
-       --gid $(groups | cut -d' ' -f1) \
-       $USER
-USER $USER
-
-CMD ["/opt/intellij/bin/idea.sh"]
-EOF
-
-docker build -t $USER/intellij $IMAGE_DIR
-
-############################################################################### run
+set -o errexit
+set -o nounset
 
 # Reference: https://dzone.com/articles/docker-x11-client-via-ssh
 chmod o+rw $HOME/.Xauthority
@@ -72,8 +10,11 @@ docker run -it \
    --net=host \
    --env=DISPLAY \
    --env=TZ=Spain/Madrid \
-   --volume=$HOME:$HOME \
-   --volume=$PWD:/src \
-   --workdir=/src \
-   --name=intellij-$USER \
-   $USER/intellij $*
+   --volume=$HOME:$HOME:rw \
+   --volume=$PWD:/media/host:rw \
+   --workdir=/media/host \
+   --env USER \
+   --env USER_ID=`id --user` \
+   --env GROUPS=$(groups | xargs getent group | cut -d: -f1,3 | tr '\n' ',' | sed 's|,$||') \
+   --name=intellij.$USER \
+   jesuspv/intellij "$@"
