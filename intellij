@@ -11,7 +11,7 @@ docker run -it \
    --env=DISPLAY \
    --env=TZ=Spain/Madrid \
    --volume=$HOME:$HOME:rw \
-   --volume=$PWD:/media/host:rw \
+   --volume=$PWD:/media/workspace:rw \
    --workdir=/media/host \
    --env USER \
    --env USER_ID=`id --user` \
